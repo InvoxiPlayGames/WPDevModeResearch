@@ -57,7 +57,8 @@ Hi
 The `SWMAuth` cookie result from this is then sent to the device over IP-to-USB
 service port `27177` (**Windows Phone 7**: `27077`) via TCP. The script inside
 [attempt_dev_mode_registration.py](/scripts/attempt_dev_mode_registration.py)
-will build the requests and parse the responses sent by the device.
+will build the requests and parse the responses sent by the device. **Do not run
+this tool if you have dev mode activated, it will disable sideloading apps!**
 
 **Windows Phone 7:** A login attempt is made using msidcrl40.dll directly to
 `https://login.live.com/RST2.srf`, using credentials given in text fields in
@@ -115,6 +116,6 @@ request.
 
 **Windows Phone 7**: Cert pinning behaviour differs based on versions - early
 enough versions do not use proper cert pinning and as such developer mode can
-be enabled. This was used by the ChevronWP jailbreak. Later versions, including
-the latest (7.10.8862.114), validate the HTTPS certificate upon connection,
-meaning no request is made unless it's an original server.
+be enabled. This was used by the ChevronWP jailbreak. Later versions check the
+SSL certificate after receiving the response, but they check for a specific cert
+fingerprint and CA name (`Microsoft Internet Authority`)

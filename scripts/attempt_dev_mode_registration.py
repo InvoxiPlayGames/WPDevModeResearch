@@ -130,8 +130,10 @@ def main(argc, argv):
             print("make sure IPtoUSBSvc is running")
         else:
             print("try either 27177 (WP8) or 27077 (WP7)")
+        return
     except:
         print("unknown error occurred while connecting")
+        return
     
     cookie = "Cookie: SWMAuth=EmmaWasHere"
     if argc >= 3:
