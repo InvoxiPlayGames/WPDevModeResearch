@@ -135,7 +135,8 @@ def main(argc, argv):
         print("unknown error occurred while connecting")
         return
     
-    cookie = "Cookie: SWMAuth=EmmaWasHere"
+    # SDK 7.1 sends \r\n, SDK 8.1 doesn't, but the device doesn't care
+    cookie = "Cookie: SWMAuth=EmmaWasHere\r\n"
     if argc >= 3:
         cookie = argv[2]
     

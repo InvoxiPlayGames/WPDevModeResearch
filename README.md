@@ -71,6 +71,12 @@ to get the `SWMAuth` cookie.
 This is all handled by `\PROGRAMS\DEVICEREG\DeviceReg.exe` in the MainOS
 partition.
 
+**Windows Phone 7**: The executable can be found at
+`\SYS\APPPLTSVC\devicereg.exe`. (TODO: i dont know if thats a real path,
+from a friend's dump of RM-801 firmware)
+
+### Server Device Registration
+
 Upon receiving the unlock command, if the device is unlocked and doesn't have
 dev mode already activated, or disabled via MDM/carrier policy, the phone itself
 will make the request to the Windows Phone developer services endpoint, which is
@@ -116,6 +122,78 @@ request.
 
 **Windows Phone 7**: Cert pinning behaviour differs based on versions - early
 enough versions do not use proper cert pinning and as such developer mode can
-be enabled. This was used by the ChevronWP jailbreak. Later versions check the
+be enabled. This was used by the ChevronWP7 jailbreak. Later versions check the
 SSL certificate after receiving the response, but they check for a specific cert
 fingerprint and CA name (`Microsoft Internet Authority`)
+
+### Enabling Developer Mode
+
+If the server returns a valid response and the response implies that Developer
+Mode should be activated, DeviceReg sets the registry value
+`MaxUnsignedApp` in key `HKLM\Software\Microsoft\DeviceReg\Install` to a DWORD
+value of the DaysLeft value in the response, then calls
+`SetDeveloperUnlockState(1)` from `SecRuntime.dll` and makes a scheduled task to
+run DeviceReg after `DaysLeft` length has passed.
+
+SetDeveloperUnlockState is very simple. It sets the registry value
+`DeveloperUnlockState` in key
+`HKLM\Software\Microsoft\SecurityManager\DeveloperUnlock` to the DWORD value
+passed, either 1 or 0.
+
+**Windows Phone 7**: SetDeveloperUnlockState is located in `coredll.dll`,
+and unlocking also calls `RegisterTestHarness` in `aygshell.dll` for two paths:
+* `\Application Data\Phone Tools\10.0\CoreCon\bin\ConmanClient3.exe`
+* `\Application Data\Phone Tools\10.0\CoreCon\bin\edm3.exe`
+
+If the response is invalid, it will immediately set `MaxUnsignedApp` to 0, but
+will not disable developer mode.
+
+Versions of DeviceReg that have certificate pinning will not return correct
+HRESULT codes to the computer, instead always returning 0x64.
+
+# Vulnerabilities?
+
+**ALL "VULNERABILITIES" HERE ARE THEORETICAL AND HAVE NOT BEEN SUCCESSFULLY
+EXPLOITED AGAINST NEITHER EMULATOR NOR REAL HARDWARE, YET**
+
+## Weak certificate chain validation in Windows Phone 7
+
+In the Windows Phone 7 version of DeviceReg which was updated to validate
+the TLS certificate sent by the server, they do their validation by querying
+the certificate chain sent by the server and individually checking the root
+and 2nd-to-last certificate, without checking if they are related in any way.
+
+In theory, this means a server could return a chain that looks something like:
+
+* `developerservices.windowsphone.com` - key controlled by attacker
+* `Microsoft Internet Authority` - key controlled by attacker
+    * Attacker must make this fake CA themselves
+    * All values other than CN must be blank
+    * Must be trusted by the user by accepting in IE or Outlook
+* `GTE CyberTrust Global Root` - no relation to other two certificates
+    * This must match the original certificate
+    * Thumbprint: `97817950d81c9670cc34d809cf794431367ef474`
+
+In testing I've gotten DeviceReg to connect to a custom server and not fail
+during TLS handshake, however it doesn't send a HTTP request. This is incredibly
+annoying as it doesn't appear to be regular certificate pinning nor behaviour
+done by `PortalProxy::CheckIfServerCertIsTrusted`.
+
+Windows Phone 8.1 uses the proper CryptoAPI calls for certificate chain
+validation, which is not vulnerable to this. This has been tested.
+
+## HTTP Header Smuggling / Overriding
+
+In the cookie value of the USB-delivered unlock packet, a full HTTP header
+is sent for the cookie value rather than a cookie itself. It's possible to
+send a value including carriage-return magic characters which will add
+additional headers to the request. WinINET/WinHTTP don't check if you're
+overriding a system header, meaning `Cookie: SWMAuth=a\r\nHost: test.lol` would
+cause the device to request from test.lol instead of developerservices
+
+As the SSL certificate must be valid for developerservices, this is not that
+useful unless a currently running server with a wildcard certificate is
+discovered and can be coerced into giving a valid response without changing
+the URL. This will never happen, and if it did, it would be Verry Temporary
+since it would rely on Microsoft never taking down that server or fixing the
+flaw. Or WinHTTP/WinINET has a vulnerability in handling request headers.
