@@ -71,9 +71,8 @@ to get the `SWMAuth` cookie.
 This is all handled by `\PROGRAMS\DEVICEREG\DeviceReg.exe` in the MainOS
 partition.
 
-**Windows Phone 7**: The executable can be found at
-`\SYS\APPPLTSVC\devicereg.exe`. (TODO: i dont know if thats a real path,
-from a friend's dump of RM-801 firmware)
+**Windows Phone 7**: The executable can be found in the `APPPLTSVC` package as
+`devicereg.exe`.
 
 ### Server Device Registration
 
@@ -156,7 +155,13 @@ HRESULT codes to the computer, instead always returning 0x64.
 **ALL "VULNERABILITIES" HERE ARE THEORETICAL AND HAVE NOT BEEN SUCCESSFULLY
 EXPLOITED AGAINST NEITHER EMULATOR NOR REAL HARDWARE, YET**
 
-## Weak certificate chain validation in Windows Phone 7
+## ~~Weak certificate chain validation in Windows Phone 7~~
+
+**UPDATE:** **This does not work.** WinHTTP is either calling our bluff with
+the fake certificate chain or versions 7.5 and 7.8 doesn't allow DeviceReg to
+use user-trusted certificate.
+
+### Non-Working Theory
 
 In the Windows Phone 7 version of DeviceReg which was updated to validate
 the TLS certificate sent by the server, they do their validation by querying
