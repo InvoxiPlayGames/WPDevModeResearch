@@ -130,7 +130,7 @@ fingerprint and CA name (`Microsoft Internet Authority`)
 If the server returns a valid response and the response implies that Developer
 Mode should be activated, DeviceReg sets the registry value
 `MaxUnsignedApp` in key `HKLM\Software\Microsoft\DeviceReg\Install` to a DWORD
-value of the DaysLeft value in the response, then calls
+value of the AppsAllowed value in the response, then calls
 `SetDeveloperUnlockState(1)` from `SecRuntime.dll` and makes a scheduled task to
 run DeviceReg after `DaysLeft` length has passed.
 

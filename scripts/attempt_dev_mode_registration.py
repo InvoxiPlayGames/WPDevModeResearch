@@ -2,7 +2,9 @@
 
 # Attempts, and likely fails, dev mode registration on a connected Windows Phone
 # script by Emma/InvoxiPlayGames, 2024
+# updated slightly for dtptd support in 2026
 
+import os
 import sys
 import struct
 import socket
@@ -119,9 +121,13 @@ def main(argc, argv):
         print_usage()
         return
     
+    sockip = "127.0.0.1"
+    if os.name != 'nt':
+        sockip = "192.168.55.101"
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        s.connect(("127.0.0.1", port))
+        s.connect((sockip, port))
     except ConnectionRefusedError:
         print("failed to connect to port")
         if port == 27077:
