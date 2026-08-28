@@ -202,3 +202,29 @@ discovered and can be coerced into giving a valid response without changing
 the URL. This will never happen, and if it did, it would be Verry Temporary
 since it would rely on Microsoft never taking down that server or fixing the
 flaw. Or WinHTTP/WinINET has a vulnerability in handling request headers.
+
+## What fails inside devicereg.exe
+
+The last time devicereg.exe was updated in WP7's lifecycle was in the initial Mango update, specifically 7.0.7403.0-7.10.7720.68.  
+I extracted the file and looked inside of it using Ghidra and Ive found why the TLS mechanism fails.  
+It does not use WinHTTP but WININET.DLL to handle the communication. Firs it calls HttpSendRequestW and if this is successfull does it check for "Microsoft Internet Authority" via its certificate validation function.  
+The custom certificate is installed into the User Root Store. Since devicereg.exe is a highly privileged system app it only trusts certs validated against the System Root Store that of course is baked in.  
+Therefore we fail before we ever fire the GET request. HttpSendRequestW fails and it never checks the "Microsoft Internet Authority" string. Instead sets the HRESULT to 0x80070005 (E_ACCESSDENIED) and also logs a debug string "Cert subject doesn't match".
+```
+    if ((iVar3 == 0) ||
+       (((local_1098 != 0 &&
+         (iVar3 = HttpAddRequestHeadersA(iVar11,local_1098,local_10c0,0), iVar3 == 0)) ||
+        (iVar3 = HttpSendRequestW(iVar11,0,0,0,0), iVar3 == 0)))) goto LAB_00017124;
+    local_10d0 = (int *)FUN_000172d0(param_1,iVar11,&local_10b8);
+    iVar3 = local_10cc;
+    if (-1 < (int)local_10d0) {
+      if (local_10b8 == 0) {
+        local_10d0 = (int *)0x80070005;
+        goto LAB_00017184;
+      }
+```
+## Conclusion  
+
+Knowing this I think its impossible to unlock a stock WP 7.5/8 device unless somebody finds a way to modify the System Root Store.  
+One outlandish theory I had came from the XDA thread I found the updates at, how about delivering a modified devicereg.exe through the same update channel? The tools absolutely exist. But again, this is impossible since a non modified ROM will always check against the Microsoft public key they used to sign the cab files, and our modified one will always fail.  
+Considering when these files were made its not out of the question they were signed using SHA-1. This has already been proven to be broken by Google in 2017. So if someone finds a way to execute a pre-image collision attack to create an update .cab matching an already existing cab's hash it is theoretically possible to push an update. Although I do not think this will happen any time soon.
